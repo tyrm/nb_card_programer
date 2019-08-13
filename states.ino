@@ -6,7 +6,7 @@
 #define BTN3_LABEL_Y 220
 
 void StateReady() {
-  Serial.println(F("\nState: StateReady"));
+  Serial.println(F("\nState: Ready"));
 
   M5.Lcd.fillScreen(BLACK);
   M5.Lcd.setCursor(0, 0);
@@ -31,7 +31,31 @@ void StateReady() {
       byte piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
       Serial.println(mfrc522.PICC_GetTypeName(piccType));
 
-      prog_state = STATE_ERROR_UNSUPPORTED_CARD;
+      if ( piccType == mfrc522.PICC_TYPE_MIFARE_4K) {
+        // Write Card UID to workingUID
+        for (byte i = 0; i < mfrc522.uid.size; i++) {
+          regWorkingUID[i] = mfrc522.uid.uidByte[i];
+        }
+        regWorkingUIDLen = mfrc522.uid.size;
+
+        // Read Initilization status on card
+        byte authStatus = mfrc522.PCD_Authenticate(mfrc522.PICC_CMD_MF_AUTH_KEY_B, 1, &nfcKeyPublic, &mfrc522.uid);
+
+        byte readBuffer[18];
+        byte readSize = sizeof(readBuffer);
+
+        byte readStatus = (MFRC522::StatusCode) mfrc522.MIFARE_Read(1, readBuffer, &readSize);
+        if (readStatus != mfrc522.STATUS_OK) {
+            Serial.print(F("MIFARE_Read() failed: "));
+            Serial.println(mfrc522.GetStatusCodeName(readStatus));
+        }
+        
+        Serial.print(F("Data in block ")); Serial.print(1); Serial.println(F(":"));
+        dump_byte_array(readBuffer, 16);
+      }
+      else {
+        prog_state = STATE_ERROR_UNSUPPORTED_CARD;
+      }
       return;
     }
   }
@@ -42,9 +66,11 @@ void StateErrorUnsupportedCard() {
   
   M5.Lcd.fillScreen(BLACK);
   M5.Lcd.setTextColor(RED);
+  M5.Lcd.setTextSize(3);
+  M5.Lcd.drawCentreString("Unsupported", 320/2, 20, 2);
+  M5.Lcd.drawCentreString("Card", 320/2, 60, 2);
   M5.Lcd.setTextSize(2);
-  M5.Lcd.drawCentreString("Unsupported Card", 320/2, 20, 2);
-  M5.Lcd.setCursor(0, 60);
+  M5.Lcd.setCursor(0, 120);
   M5.Lcd.setTextColor(CYAN);
   M5.Lcd.println("Supported Cards:");
   M5.Lcd.println(" * MIFARE 4KB");
@@ -56,7 +82,7 @@ void StateErrorUnsupportedCard() {
   while (true) {
     M5.update();
     if (M5.BtnC.wasReleased()) {
-      Serial.print(F("BtnA was Pressed"));
+      Serial.println(F("BtnA was Pressed"));
       prog_state = STATE_READY;
       break;
     }

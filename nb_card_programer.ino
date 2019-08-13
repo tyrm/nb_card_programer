@@ -65,13 +65,15 @@ void setup() {
     nfcKeyAdmin.keyByte[i]  = nfcKeyAdminBytes[i];
     nfcKeyGate.keyByte[i]   = nfcKeyGateBytes[i];
   }
-
 }
 
 void loop() {
   switch (prog_state) {
     case STATE_READY:
       StateReady();
+      break;
+    case STATE_ASK_FORMAT:
+      StateErrorUnsupportedCard();
       break;
     case STATE_ERROR_UNSUPPORTED_CARD:
       StateErrorUnsupportedCard();
@@ -99,4 +101,20 @@ void ShowReaderDetails() {
   if ((v == 0x00) || (v == 0xFF)) {
     Serial.println(F("WARNING: Communication failure, is the MFRC522 properly connected?"));
   }
+}
+
+/**
+ * Helper routine to dump a byte array as hex values to Serial.
+ */
+void dump_byte_array(byte *bBuffer, byte bufferSize) {
+    for (byte i = 0; i < bufferSize ; i++) {
+        Serial.print(bBuffer[i] < 0x10 ? " 0" : " ");
+        if (i % 16 == 15) {
+          Serial.println(bBuffer[i], HEX);
+          
+        } else {
+          
+          Serial.print(bBuffer[i], HEX);
+        }
+    }
 }
